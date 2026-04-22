@@ -1,0 +1,92 @@
+name: ICAI SPOM Slot Monitor
+
+# ─── Schedule ────────────────────────────────────────────────────────
+# Runs every 5 minutes via GitHub Actions cron.
+# The minimum GitHub Actions cron interval is 5 minutes.
+# For faster checks (2-3 min), run locally or on Railway/Render instead.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"    # every 5 minutes
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: false
+        default: "once"
+        type: choice
+        options:
+          - once
+          - debug
+          - test
+          - reset
+
+permissions:
+  contents: write    # needed to commit/restore state.json cache
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout repo ──────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Python setup ───────────────────────────────────────────
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      # ── 3. Install Python dependencies ────────────────────────────
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── 4. Install Chrome + ChromeDriver ─────────────────────────
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      # ── 5. Restore cached state (persists across runs) ────────────
+      - name: Restore state cache
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: spom-state-${{ github.ref_name }}
+          restore-keys: |
+            spom-state-
+
+      # ── 6. Run the monitor ────────────────────────────────────────
+      - name: Run SPOM monitor
+        env:
+          TELEGRAM_BOT_TOKEN:   ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS:    ${{ secrets.TELEGRAM_CHAT_IDS }}
+          ICAI_USERNAME:        ${{ secrets.ICAI_USERNAME }}
+          ICAI_PASSWORD:        ${{ secrets.ICAI_PASSWORD }}
+          HEADLESS:             "true"
+          ALERT_ON_FIRST_RUN:   "true"
+          SEND_STARTUP_MESSAGE: "false"
+          MONTHS_TO_CHECK:      "3"
+          PAGE_TIMEOUT_SEC:     "30"
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          if [ "$MODE" = "debug" ]; then
+            python main.py --debug
+          elif [ "$MODE" = "test" ]; then
+            python main.py --test
+          elif [ "$MODE" = "reset" ]; then
+            python main.py --reset
+          else
+            python main.py --once
+          fi
+
+      # ── 7. Save updated state (so next run sees the new baseline) ──
+      - name: Save state cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: spom-state-${{ github.ref_name }}-${{ github.run_id }}
