@@ -1,0 +1,15 @@
+# ICAI SPOM Slot Monitor — Python dependencies
+#
+# Install with:
+#   pip install -r requirements.txt
+#
+# Python 3.10+ required.
+
+# Browser automation (REQUIRED)
+selenium>=4.20.0
+
+# Auto-downloads matching ChromeDriver — no manual driver management needed
+webdriver-manager>=4.0.0
+
+# Load .env files automatically (optional but recommended)
+python-dotenv>=1.0.0
