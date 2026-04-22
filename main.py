@@ -53,7 +53,9 @@ from notifier import (
     send_test_alert,
     send_startup_notification,
 )
-
+# Read State and City from GitHub Action inputs
+USER_STATE = os.getenv('USER_STATE', 'Maharashtra')
+USER_CITY = os.getenv('USER_CITY', 'Pune')
 # ─── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
@@ -116,13 +118,21 @@ def run_check(state: Dict, verbose: bool = False) -> bool:
     Updates `state` in-place and persists it to disk.
     """
     any_alert_sent = False
+# Use the inputs provided in the GitHub Action UI instead of the config file
+    watchlist = [{"country": "India", "state": USER_STATE, "city": USER_CITY, "centres": []}]
+    
+    for loc_data in watchlist:
+        # Create a simple object-like structure to keep the rest of the code working
+        class Loc: pass
+        loc = Loc()
+        loc.country = loc_data["country"]
+        loc.state = loc_data["state"]
+        loc.city = loc_data["city"]
+        loc.centres = loc_data["centres"]
 
-    for loc in config.WATCHLIST:
         key          = _state_key(loc.country, loc.state, loc.city)
         prev_entry   = state.get(key, {})
-        prev_results = prev_entry.get("results", {})
-        prev_hash    = prev_entry.get("hash", "")
-        is_first_run = (prev_hash == "")
+  
 
         logger.info(
             f"═══ {loc.country} / {loc.state} / {loc.city} "
