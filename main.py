@@ -122,6 +122,8 @@ def run_check(state: Dict, verbose: bool = False) -> bool:
     watchlist = [{"country": "India", "state": USER_STATE, "city": USER_CITY, "centres": []}]
     
     for loc_data in watchlist:
+      # Define the variable that caused the error
+        is_first_run = not bool(state)
         # Create a simple object-like structure to keep the rest of the code working
         class Loc: pass
         loc = Loc()
